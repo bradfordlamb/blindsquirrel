@@ -707,9 +707,28 @@ function runSwitch(){
 }
 $('checkSwitch').addEventListener('click',()=>{runSwitch.clicked=true;runSwitch();});
 
+
+/* ---------- keep verified pricing honest ---------- */
+// A verified plan's EFL details are trusted only while they still reproduce the
+// plan's current Power to Choose average prices (500/1,000/2,000 kWh, rounded to 0.1¢).
+// If the provider reprices or CenterPoint changes delivery rates, the plan falls back
+// to the estimate and is flagged, so stale numbers never reach a visitor.
+function checkVerified(list){
+  const dropped=[];
+  for(const p of list){
+    if(!p.v)continue;
+    const saved=state.night;state.night=new Array(12).fill(0.35); // EFL averages assume 35% free-hours use
+    const ok=[500,1000,2000].every((k,i)=>Math.abs(monthCost(p,k,0)/k*100-p.p[i])<=0.11);
+    state.night=saved;
+    if(!ok){dropped.push(p.co+' '+p.plan);p.vStale=p.v;delete p.v;}
+  }
+  if(dropped.length)console.info('Verified pricing no longer matches Power to Choose; using estimates for:',dropped.join('; '));
+  return list;
+}
+
 /* ---------- boot ---------- */
 renderMonths();
-fetch('plans.json').then(r=>r.json()).then(d=>{PLANS=d;renderAll();fetch('meta.json').then(r=>r.json()).then(m=>{if(m.updated)$('snap').textContent=m.updated;}).catch(()=>{});}).catch(()=>{
+fetch('plans.json').then(r=>r.json()).then(d=>{PLANS=checkVerified(d);renderAll();fetch('meta.json').then(r=>r.json()).then(m=>{if(m.updated)$('snap').textContent=m.updated;}).catch(()=>{});}).catch(()=>{
   $('top3').innerHTML='<p class="status err">Couldn’t load the plan list. Reload the page to try again.</p>';renderChart();renderFacts();});
 })();
 </script>
