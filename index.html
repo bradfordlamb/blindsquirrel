@@ -196,7 +196,7 @@ tr.total td{font-weight:600;border-top:2px solid var(--line)}
         <div class="row">
           <label class="fld">ZIP code<input type="text" id="zip" inputmode="numeric" maxlength="5" value="77584" style="width:110px"></label>
           <label class="fld">Utility (delivery company)
-            <select id="tdu"><option value="CNP">CenterPoint Energy</option><option value="TNMP">Texas-New Mexico Power (TNMP)</option></select>
+            <select id="tdu"><option value="CNP">CenterPoint (Houston area)</option><option value="ONCOR">Oncor (Dallas–Fort Worth, Midland, Waco)</option><option value="AEPC">AEP Texas Central (Corpus Christi, Valley)</option><option value="AEPN">AEP Texas North (Abilene, San Angelo)</option><option value="TNMP">TNMP (Texas-New Mexico Power)</option><option value="LPL">Lubbock Power &amp; Light</option></select>
           </label>
         </div>
         <div class="drop" id="dropCsv">
@@ -289,7 +289,7 @@ tr.total td{font-weight:600;border-top:2px solid var(--line)}
   </section>
 
   <footer class="foot">
-    <p>Plan prices: Power to Choose (Public Utility Commission of Texas) snapshot for ZIP 77584, taken <span id="snap">November 22, 2026</span>. Prices change daily; confirm on the plan's EFL before you sign up.</p>
+    <p>Plan prices: Power to Choose (Public Utility Commission of Texas) snapshot covering all six competitive utility areas, taken <span id="snap">November 22, 2026</span>. Prices change daily; confirm on the plan's EFL before you sign up.</p>
     <p>“Verified” plans were priced from their full EFL pricing. “Estimated” plans were priced from the EFL's 500, 1,000 and 2,000 kWh average prices, which is close for most plans but can be off by a few dollars a month because the EFL rounds those prices. Treat plans within about $60 a year of each other as tied, and let the cancel fee and fine print decide. Bill-credit plans are flagged.</p>
     <p>Blind Squirrel Energy is a prototype plan-comparison tool, not an electricity provider. Nothing you upload is sent anywhere; all math runs in your browser.</p>
   </footer>
@@ -300,7 +300,7 @@ tr.total td{font-weight:600;border-top:2px solid var(--line)}
 <script>
 (function(){
 const MONTHS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-const TDU={CNP:{base:4.90,kwh:6.5611,name:'CenterPoint'},TNMP:{base:null,kwh:null,name:'TNMP'}};
+const TDU={CNP:{base:4.90,kwh:6.5611,name:'CenterPoint'},ONCOR:{name:'Oncor'},AEPC:{name:'AEP Texas Central'},AEPN:{name:'AEP Texas North'},TNMP:{name:'TNMP'},LPL:{name:'Lubbock Power & Light'}};
 const EXAMPLE=[1150,1080,1240,1420,1890,2350,2780,2720,2380,1640,1210,1260];
 const $=id=>document.getElementById(id);
 try{if(window.pdfjsLib)pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';}catch(e){}
@@ -417,7 +417,16 @@ function parseCsv(text){
   return {usage:usage.map(Math.round),est,night,overnight:interval?ovr/tot:null,weekend:wk/tot,esiid,
     range:[recs.reduce((a,r)=>Math.min(a,r.y*10000+r.mo*100+r.da),99999999),recs.reduce((a,r)=>Math.max(a,r.y*10000+r.mo*100+r.da),0)],interval};
 }
-function tduFromEsiid(e){if(!e)return null;if(e.startsWith('1008901'))return 'CNP';return null;}
+function tduFromEsiid(e){if(!e)return null;const m={'1008901':'CNP','1017699':'ONCOR','1044372':'ONCOR','1003278':'AEPC','1020404':'AEPN','1040051':'TNMP','1011292':'LPL'};return m[e.slice(0,7)]||null;}
+// Rough ZIP-prefix guess; the meter ID in an uploaded CSV overrides it.
+function tduFromZip(z){
+  const p=+z.slice(0,3);
+  const own=[[780,782,'San Antonio (CPS Energy)'],[786,787,'Austin Energy'],[798,799,'El Paso Electric']];
+  for(const [a,b,n] of own)if(p>=a&&p<=b)return {none:n};
+  const m=[[770,775,'CNP'],[750,754,'ONCOR'],[756,757,'ONCOR'],[760,763,'ONCOR'],[765,767,'ONCOR'],[797,797,'ONCOR'],[779,779,'AEPC'],[783,785,'AEPC'],[788,788,'AEPC'],[769,769,'AEPN'],[795,796,'AEPN'],[794,794,'LPL']];
+  for(const [a,b,t] of m)if(p>=a&&p<=b)return {tdu:t};
+  return null;
+}
 
 /* ---------- rendering ---------- */
 function renderMonths(){
@@ -620,7 +629,12 @@ $('recalc').addEventListener('click',()=>{
   renderMonths();renderAll();
 });
 $('tdu').addEventListener('change',renderAll);
-$('zip').addEventListener('change',()=>{const z=$('zip').value.trim();if(!/^7[5-9]\d{3}$/.test(z)){$('csvStatus').className='status err';$('csvStatus').textContent='Enter a Texas ZIP code (75000–79999).';}});
+$('zip').addEventListener('change',()=>{const z=$('zip').value.trim();const st=$('csvStatus');
+  if(!/^7[5-9]\d{3}$/.test(z)){st.className='status err';st.textContent='Enter a Texas ZIP code (75000–79999).';return;}
+  const g=tduFromZip(z);
+  if(g&&g.none){st.className='status err';st.textContent=`${z} looks like it's served by ${g.none}, which doesn't offer a choice of electricity plans.`;return;}
+  if(g&&g.tdu&&!state.esiid){$('tdu').value=g.tdu;renderAll();}
+  st.className='status';st.textContent=g?`Utility set to ${TDU[$('tdu').value].name}. Check it against your bill; some ZIPs are split between utilities.`:'Pick your utility from the list. It’s printed on your bill as the delivery company.';});
 
 /* ---------- EFL input ---------- */
 function parseEflText(txt){
