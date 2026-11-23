@@ -1,0 +1,27 @@
+name: Refresh plan prices
+
+on:
+  schedule:
+    - cron: "17 10 * * *"   # daily, ~5 AM Central
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Pull plans from Power to Choose
+        run: python3 scripts/update_plans.py
+      - name: Commit if changed
+        run: |
+          git config user.name "plan-refresh-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add plans.json meta.json
+          git diff --cached --quiet || git commit -m "Refresh plan prices"
+          git push
