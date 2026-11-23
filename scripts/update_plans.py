@@ -11,8 +11,12 @@ import json, datetime, pathlib, urllib.request
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 API = "https://www.powertochoose.org/en-us/service/v1/"
-# 77584 (Pearland) returns both CenterPoint and TNMP plans.
-ZIPS = ["77584"]
+# One ZIP per competitive utility area. 77584 (Pearland) returns both CenterPoint and TNMP.
+ZIPS = ["77584",   # CenterPoint + TNMP
+        "75201",   # Oncor (Dallas)
+        "78401",   # AEP Texas Central (Corpus Christi)
+        "79601",   # AEP Texas North (Abilene)
+        "79401"]   # Lubbock Power & Light
 
 def fetch(zip_code):
     body = json.dumps({
@@ -35,6 +39,7 @@ def tdu_code(name):
     if "ONCOR" in n: return "ONCOR"
     if "AEP" in n and "NORTH" in n: return "AEPN"
     if "AEP" in n: return "AEPC"
+    if "LUBBOCK" in n: return "LPL"
     return n[:12]
 
 def slim(p):
@@ -88,7 +93,7 @@ def main():
                 else:
                     stale.append(f'{r["co"]} {r["plan"]} ({r["id"]})')
             rows.append(r)
-    if len(rows) < 50:
+    if len(rows) < 300:
         raise SystemExit(f"Only {len(rows)} plans came back; not overwriting plans.json")
     (ROOT / "plans.json").write_text("[\n" + ",\n".join(json.dumps(r, separators=(",", ":")) for r in rows) + "\n]\n")
     today = datetime.date.today()
