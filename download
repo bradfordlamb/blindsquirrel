@@ -1,0 +1,6 @@
+.DS_Store
+__pycache__/
+*.pyc
+# Never commit personal usage data or bills
+*.csv
+*IntervalData*
