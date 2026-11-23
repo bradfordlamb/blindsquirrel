@@ -54,9 +54,27 @@ def slim(p):
         "efl": p.get("fact_sheet") or "", "go": p.get("go_to_plan") or p.get("website") or "",
     }
 
+CNP_TDU = (4.90, 6.5611)  # $/month, cents/kWh — CenterPoint delivery charges
+
+def verified_matches(r, v):
+    """True if the verified EFL details still reproduce today's average prices."""
+    base_tdu, kwh_tdu = CNP_TDU
+    for k, avg in zip((500, 1000, 2000), r["p"]):
+        if v["kind"] == "flat":
+            cost = k * (v["e"] + kwh_tdu) / 100 + v["base"] + base_tdu
+            if v.get("credit") and k >= v["credit"][0]:
+                cost -= v["credit"][1]
+        elif v["kind"] == "tou":  # EFL averages assume 35% of use in the free hours
+            cost = v["base"] + base_tdu + k * kwh_tdu / 100 + k * 0.65 * v["day"] / 100 + k * 0.35 * v["night"] / 100
+        else:
+            return False
+        if abs(cost / k * 100 - avg) > 0.11:
+            return False
+    return True
+
 def main():
     verified = json.loads((ROOT / "data" / "verified.json").read_text())
-    seen, rows = set(), []
+    seen, rows, stale = set(), [], []
     for z in ZIPS:
         for p in fetch(z):
             if p.get("prepaid") or p["plan_id"] in seen: continue
@@ -64,7 +82,11 @@ def main():
             if None in r["p"]: continue
             seen.add(p["plan_id"])
             v = verified.get(str(r["id"]))
-            if v and r["tdu"] == "CNP": r["v"] = v
+            if v and r["tdu"] == "CNP":
+                if verified_matches(r, v):
+                    r["v"] = v
+                else:
+                    stale.append(f'{r["co"]} {r["plan"]} ({r["id"]})')
             rows.append(r)
     if len(rows) < 50:
         raise SystemExit(f"Only {len(rows)} plans came back; not overwriting plans.json")
@@ -72,6 +94,9 @@ def main():
     today = datetime.date.today()
     (ROOT / "meta.json").write_text(json.dumps({"updated": f"{today:%B} {today.day}, {today.year}", "zip": ",".join(ZIPS)}) + "\n")
     print(f"Wrote {len(rows)} plans")
+    if stale:
+        print("::warning::Verified pricing no longer matches Power to Choose for: " + "; ".join(stale)
+              + ". Using estimates; re-check their EFLs and update data/verified.json.")
 
 if __name__ == "__main__":
     main()
