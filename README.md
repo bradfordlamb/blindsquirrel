@@ -42,9 +42,9 @@ The workflow in `.github/workflows/refresh-plans.yml` runs `scripts/update_plans
 python3 scripts/update_plans.py
 ```
 
-The script refuses to overwrite `plans.json` if fewer than 50 plans come back, so a bad response won't wipe the site.
+The script refuses to overwrite `plans.json` if fewer than 300 plans come back, so a bad response won't wipe the site.
 
-To cover more of Texas, add ZIP codes to `ZIPS` in the script (for example one Oncor, AEP Central and AEP North ZIP) and add those utilities to the dropdown in `index.html`.
+The script pulls one ZIP per utility area (see `ZIPS`). Delivery charges are only built in for CenterPoint, so verified EFL pricing currently applies to CenterPoint plans; other areas use EFL-average estimates.
 
 ## How plans are priced
 
@@ -62,7 +62,7 @@ Bill credit: add `"credit": [1000, 125]` (minimum kWh, dollars). Free-hours plan
 
 ## Known limits (prototype)
 
-- Plan data covers CenterPoint and TNMP (ZIP 77584) only.
+- Plan data covers all six competitive utility areas (CenterPoint, Oncor, AEP Texas Central and North, TNMP, Lubbock Power & Light). Areas served by city utilities or co-ops (San Antonio, Austin, El Paso, etc.) have no plan choice.
 - Only a handful of plans have verified EFL pricing.
 - Reading a visitor's current EFL is best effort; the fields stay editable.
 - Not an electricity provider. Before earning referral fees, check Texas PUC broker registration rules.
