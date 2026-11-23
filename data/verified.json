@@ -1,0 +1,33 @@
+{
+  "21212": {
+    "kind": "flat",
+    "e": 4.9217,
+    "base": 0,
+    "note": "Energy 4.9217\u00a2/kWh, no base charge, paperless only"
+  },
+  "34725": {
+    "kind": "tou",
+    "base": 9.95,
+    "day": 6.59,
+    "night": 0,
+    "from": 23,
+    "to": 6,
+    "note": "Free 11 PM\u20136 AM; 6.59\u00a2 other hours; $9.95 base"
+  },
+  "39240": {
+    "kind": "flat",
+    "e": 4.72,
+    "base": 0,
+    "note": "Energy 4.72\u00a2/kWh, no base charge"
+  },
+  "33362": {
+    "kind": "flat",
+    "e": 11.449,
+    "base": 0,
+    "credit": [
+      1000,
+      125
+    ],
+    "note": "11.449\u00a2/kWh; $125 credit at 1,000+ kWh"
+  }
+}
